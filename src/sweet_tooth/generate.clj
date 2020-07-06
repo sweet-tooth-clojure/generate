@@ -2,13 +2,17 @@
   "Write code generators that can be executed from the REPL"
   (:require [clojure.string :as str]
             [cljstache.core :as cs]
+            [rewrite-clj.custom-zipper.core :as rcz]
+            [rewrite-clj.custom-zipper.utils :as rcu]
             [rewrite-clj.zip :as rz]
+            [rewrite-clj.zip.whitespace :as rzw]
             [clojure.spec.alpha :as s]))
 
 ;;------
 ;; generator helpers
 ;;------
 
+;; paths TODO this isn't that great
 (defn point-path-segments
   [{:keys [path]} {:keys [path-base] :as opts
                    :or {path-base []}}]
@@ -19,6 +23,44 @@
 (defn point-path
   [point opts]
   (str/join "/" (point-path-segments point opts)))
+
+;; rewriting
+
+(defn find-anchor
+  [loc anchor]
+  (rz/up (rz/find-value loc rz/next anchor)))
+
+(defn insert-below-anchor
+  [loc anchor form]
+  ;; need to use rz/up because "anchors" exist in source as forms like
+  ;; `#_pref:name`. we're finding the value `pref:name`, which exists in a
+  ;; comment node, so we need to navigate up to the comment node
+  (let [anchor-loc (find-anchor loc anchor)
+        left-node  (rz/node (rcz/left anchor-loc))
+        whitespace (and (:whitespace left-node) left-node)]
+    (-> anchor-loc
+        (rcz/insert-right form)
+        (rz/right)
+        (rzw/insert-newline-left)
+        (rcz/insert-left whitespace)
+        ;; navigate back to anchor
+        (rcz/left)
+        (rcz/left)
+        (rcz/left))))
+
+(defn insert-forms-below-anchor
+  [loc anchor forms]
+  (reduce (fn [node form]
+            (insert-below-anchor node anchor form))
+          loc
+          (reverse forms)))
+
+(defn clear-right [loc]
+  (rcu/remove-right-while loc (constantly true)))
+
+(defn clear-right-anchor
+  [loc anchor]
+  (clear-right (find-anchor loc anchor)))
 
 ;;------
 ;; point generators
