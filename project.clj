@@ -1,4 +1,4 @@
-(defproject sweet-tooth/generate "0.1.1"
+(defproject sweet-tooth/generate "0.1.2"
   :description "Generate code from the REPL"
   :url "https://github.com/sweet-tooth-clojure/generate"
   :license {:name "Eclipse Public License"
