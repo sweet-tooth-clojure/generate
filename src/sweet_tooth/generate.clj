@@ -22,7 +22,7 @@
 
 (defn point-path
   [point opts]
-  (str/join "/" (point-path-segments point opts)))
+  (str/join java.io.File/separator (point-path-segments point opts)))
 
 ;; rewriting
 
